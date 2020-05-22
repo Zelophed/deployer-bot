@@ -12,12 +12,6 @@ const list = require("./list.js")
 
 const logger = require('./logger.js');
 
-const validSubmissionChannels = config.validSubmissionChannels;
-const validCommandChannels = config.validCommandChannels;
-const rolesThatCanRemoveSubmissions = config.rolesThatCanRemoveSubmissions;
-const roleSuggestionId = config.roleSuggestionId;
-const roleBugId = config.roleBugId;
-
 client.on('message', async message => {
     if (message.author.bot) return;
 

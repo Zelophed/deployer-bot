@@ -162,7 +162,7 @@ async function confirmSuggestion(msg) {
 
 function isFirstSuggestion(user) {
     const users = require("./data/users.json");
-    logger.debug("list: ",users.suggestors);
+    //logger.debug("list: ",users.suggestors);
     return !users.suggestors.includes(user.id);
 }
 
@@ -225,8 +225,4 @@ function removeFile(title, subDirectory){
         if (err) logger.error("issue while removing file ", err);
         else logger.info("removed file: " + title + " of type " + subDirectory);
     });
-}
-
-module.exports = {
-    reacted: reactionAdded,
 }

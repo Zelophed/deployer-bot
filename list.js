@@ -1,6 +1,11 @@
+const fs = require("fs");
+
 const client = require("./client.js");
 const logger = require('./logger.js');
 const util = require('./util.js');
+const config = require("./config.json");
+
+const validCommandChannels = config.validCommandChannels;
 
 //command for listing submissions
 client.on("message", async message => {
@@ -15,6 +20,14 @@ client.on("message", async message => {
 
     var files = await readAllFiles(type);
     if (!files) return;
+
+    var match = message.content.match(/bulk( \d+)?( \d+)?/)
+
+    if (match) {
+        logger.info("matched bulk request: "+ match);
+        replyBulk(files, message, type, match);
+        return;
+    }
 
     var thisMessage;
     await message.channel.send("found a total of " + files.length + " submissions for type " + type).then(msg => {
@@ -95,6 +108,38 @@ function buildEmbedWithFiles(files, type, page) {//page 0 = first page
     embed["fields"] = data;
     logger.info("embed build successful");
     return embed;
+}
+
+function replyBulk(files, msg, type, match) {
+    logger.debug("starting bulk reply");
+    var indexStart = 0;
+    var indexEnd = files.length-1;
+    if (match[1]) {
+        if (match[1] >= indexStart && match[1] <= indexEnd) indexStart = match[1];
+    }
+    if (match[2]) {
+        if (match[2] >= indexStart && match[2] <= indexEnd) indexEnd = match[2];
+    }
+
+    var reply = "";
+    for (var i = indexStart; i <= indexEnd; i++) {
+        var currFile = require("./data/" + type + "s/" + files[i]);
+        reply = reply.concat(files[i], ": ", currFile.link, " entry ", (i+1), " from ", currFile.author, ": ", currFile.msg.substring(0,500), "\n");
+    }
+
+    fs.writeFile("./data/dump.txt", reply, function (err) {
+        if (err) throw err;
+        logger.debug("written dump data to file");
+
+        msg.channel.send("yo have fun with this :)",{
+            files: [{
+                attachment: "./data/dump.txt",
+                name: "dump.txt"
+            }]
+        }).catch(err => logger.error("issue while sending reply" + err));
+        logger.info("finished bulk reply");
+    });
+
 }
 
 async function readAllFiles(subDirectory) {
