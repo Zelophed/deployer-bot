@@ -10,6 +10,9 @@ const submission = require("./submission.js");
 //list all submissions
 const list = require("./list.js")
 
+//server commands
+const server = require("./server.js");
+
 const logger = require('./logger.js');
 
 client.on('message', async message => {
