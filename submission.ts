@@ -89,7 +89,6 @@ async function validateSubmission(message: Message | PartialMessage) {
 
 	if (!(submission || bug)) return;
 
-	let msg = message;
 	const match: RegExpMatchArray = message.content.match(/^<@&\d+> above (\d+)$/);
 	logger.debug("match: ", match);
 	if (match) {
@@ -98,18 +97,16 @@ async function validateSubmission(message: Message | PartialMessage) {
 		if (message.channel.messages.cache.array().length < target) {
 			await message.channel.messages.fetch({limit: target}).catch((err) => logger.error("issue while fetching messages ", err));
 		}
-		let msgs = message.channel.messages.cache.last(target);
-		let targetMessage = msgs[msgs.length - 1];
-		logger.debug("tm1  ", targetMessage);
-		msg = targetMessage;
+		let targetMessage = message.channel.messages.cache.last(target)[target-1];
+		//logger.debug("tm1  ", targetMessage);
 		message.delete().catch((err) => logger.error("issue while deleting message ", err.toString()));
-		if (bug) handleSubmission(msg, "bug");
-		if (submission) handleSubmission(msg, "suggestion");
+		if (bug) handleSubmission(targetMessage, "bug");
+		if (submission) handleSubmission(targetMessage, "suggestion");
 		return;
 	}
 
-	if (bug) handleSubmission(msg, "bug");
-	if (submission) await confirmSuggestion(msg);
+	if (bug) handleSubmission(message, "bug");
+	if (submission) await confirmSuggestion(message);
 }
 
 async function confirmSuggestion(msg: Message | PartialMessage): Promise<void> {
@@ -149,13 +146,13 @@ async function confirmSuggestion(msg: Message | PartialMessage): Promise<void> {
 
 }
 
-function isFirstSuggestion(user): boolean {
+function isFirstSuggestion(user: User): boolean {
 	const users: any = importFresh("./data/users.json");
 	//logger.debug("list: ",users.suggestors);
 	return !users.suggestors.includes(user.id);
 }
 
-function addUserToList(user): void {
+function addUserToList(user: User): void {
 	const users: any = importFresh("./data/users.json");
 	users.suggestors.push(user.id);
 	fs.writeFile("./data/users.json", JSON.stringify(users, null, 4), function (err) {
@@ -164,7 +161,7 @@ function addUserToList(user): void {
 	});
 }
 
-function handleSubmission(msg, type) {
+function handleSubmission(msg: Message | PartialMessage, type: "suggestion" | "bug"): void {
 	logger.info("handling submission: " + msg.content + " of type " + type);
 
 	//save info to local file
@@ -178,7 +175,7 @@ function handleSubmission(msg, type) {
 		.catch(() => logger.error("issue while adding reactions :("));
 }
 
-function createFile(msg, subDirectory) {
+function createFile(msg: Message | PartialMessage, subDirectory: "suggestion" | "bug"): void {
 	//subDirectory should be either suggestion or bug
 	const msgTitle: string = msg.id + ".json";
 	const msgLink: string = "https://discordapp.com/channels/" + msg.guild.id + "/" + msg.channel.id + "/" + msg.id;
@@ -194,7 +191,7 @@ function createFile(msg, subDirectory) {
 	});
 }
 
-function scanAndRemoveFile(msg: Message | PartialMessage) {
+function scanAndRemoveFile(msg: Message | PartialMessage): void {
 	const msgTitle = msg.id + ".json";
 	//suggestions
 	fs.access("./data/suggestions/" + msgTitle, (err) => {
@@ -208,7 +205,7 @@ function scanAndRemoveFile(msg: Message | PartialMessage) {
 	});
 }
 
-function removeFile(title: string, subDirectory: "suggestion" | "bug") {
+function removeFile(title: string, subDirectory: "suggestion" | "bug"): void {
 	//subDirectory should be either suggestion or bug
 	fs.unlink("./data/" + subDirectory + "s/" + title, (err) => {
 		if (err) logger.error("issue while removing file ", err);

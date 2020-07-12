@@ -75,6 +75,7 @@ function waitForReaction(msg: Message, type: "suggestion" | "bug") {
 			waitForReaction(msg, type);
 		})
 		.catch(async _collected => {
+			logger.debug(_collected.toString());
 			await msg.reactions.removeAll();
 			await msg.edit("10 minute timeout passed. type the command again if needed");
 			logger.info("reaction timeout, reactions cleared");

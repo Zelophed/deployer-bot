@@ -5,6 +5,9 @@
       <webServer id="75b4831f-844e-4026-ac47-af0eccb914cb" name="homeserver" url="http://localhost">
         <fileTransfer mountedRoot="Y:\drive3\deployer bot\deployer-bot" accessType="MOUNT" port="0" />
       </webServer>
+      <webServer id="f20c53eb-a357-4e6b-bcc6-2149cafe0722" name="testbot" url="http://localhost">
+        <fileTransfer mountedRoot="Y:\drive3\deployer bot\testbot" accessType="MOUNT" port="0" />
+      </webServer>
     </option>
   </component>
 </project>

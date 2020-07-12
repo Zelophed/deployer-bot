@@ -50,4 +50,8 @@ client.on("message", (msg: Message | PartialMessage) => {
 
 });
 
+//catch unhandled promise rejections
+process.on("unhandledRejection", err => logger.error("unhandled promise rejection: " + err.toString()));
+
+//login to the bot
 client.login(config.token).catch(err => logger.error("issue during login" + err.toString()));
