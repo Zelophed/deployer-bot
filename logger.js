@@ -1,15 +1,13 @@
-const log4js = require("log4js");
-
+"use strict";
+exports.__esModule = true;
+var log4js = require("log4js");
 log4js.configure({
-  appenders: {
-      debugTxt: { type: "file", filename: "logs/debug.txt", maxLogSize: 10485760, compress: true},
-      infoTxt: { type: "file", filename: "logs/info.txt", maxLogSize: 10485760, compress: true},
-      infoFilter: { type : "logLevelFilter", appender: "infoTxt", level: "info"},
-      console: { type: "console" }
-   },
-  categories: { default: { appenders: ["debugTxt", "infoFilter", "console"], level: "debug" } }
+    appenders: {
+        debugTxt: { type: "file", filename: "logs/debug.txt", maxLogSize: 10485760, compress: true },
+        infoTxt: { type: "file", filename: "logs/info.txt", maxLogSize: 10485760, compress: true },
+        infoFilter: { type: "logLevelFilter", appender: "infoTxt", level: "info" },
+        console: { type: "console" }
+    },
+    categories: { "default": { appenders: ["debugTxt", "infoFilter", "console"], level: "debug" } }
 });
-
-const logger = log4js.getLogger();
-
-module.exports = logger;
+exports.logger = log4js.getLogger();
