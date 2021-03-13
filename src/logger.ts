@@ -1,4 +1,5 @@
 import log4js = require("log4js");
+import * as fs from "fs";
 
 log4js.configure({
 	appenders: {
@@ -9,5 +10,10 @@ log4js.configure({
 	},
 	categories: { default: { appenders: ["debugTxt", "infoFilter", "console"], level: "debug" } }
 });
+
+const dir = "./logs";
+if (!fs.existsSync(dir)) {
+	fs.mkdirSync(dir);
+}
 
 export const logger = log4js.getLogger();

@@ -16,11 +16,18 @@ const roleBugId: Snowflake = config.roleBugId;
 
 //recognize submission and store to files
 client.on('message', async (message: Message | PartialMessage) => {
-	if (message.author.bot) return;
+	if (message.author?.bot) return;
 
 	if (message.guild === null) return;
 
-	await validateSubmission(message);
+	let msg: Message;
+
+	if (message.partial)
+		msg = await message.fetch();
+	else
+		msg = message as Message;
+
+	await validateSubmission(msg);
 });
 
 //delete files when message gests deleted
@@ -54,7 +61,7 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 
 	//logger.debug("correct emoji");
 
-	let member: GuildMember = reaction.message.guild.member(user.id);
+	let member: GuildMember | null | undefined = reaction.message.guild?.member(user.id);
 	if (!member) return;
 
 	//logger.debug("member ", member);
@@ -73,8 +80,8 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 	logger.debug("reaction handler done");
 });
 
-async function validateSubmission(message: Message | PartialMessage) {
-	logger.debug("Message: " + message.content + " in channel: #" + (<TextChannel>message.channel).name);
+async function validateSubmission(message: Message) {
+	logger.debug("Msg - (#" + (<TextChannel>message.channel).name + ") [" + message.author.tag + "]: " + message.content);
 
 	if (!util.sentFromValidChannel(message, validSubmissionChannels))
 		return;
@@ -89,17 +96,30 @@ async function validateSubmission(message: Message | PartialMessage) {
 
 	if (!(submission || bug)) return;
 
-	const match: RegExpMatchArray = message.content.match(/^<@&\d+> above (\d+)$/);
-	logger.debug("match: ", match);
+	const match: RegExpMatchArray | null = message.content.match(/^<@&\d+> above (\d+)$/);
+	//logger.debug("match: ", match);
 	if (match) {
-		const target: number = Number(match[1]) + 1;
+		const target: number = Number(match[1]);
 		//logger.debug("target: ", target);
-		if (message.channel.messages.cache.array().length < target) {
-			await message.channel.messages.fetch({limit: target}).catch((err) => logger.error("issue while fetching messages ", err));
+
+		let targetMessage: Message | undefined;
+
+		await message.channel.messages.fetch({limit: target, before: message.id}).then(fetched => {
+			//fetched.array().forEach((m, i, _a) => logger.debug("forEach: @" + i + ": " + m.content));
+			targetMessage = fetched.last();
+			logger.debug("last: " + targetMessage?.content);
+		}).catch(err => logger.debug("issue while fetching messages .. " + err.toString()));
+
+		if (!targetMessage) {
+			await message.reply("no target found ;_;").then(async msg => {
+				await new Promise(r => setTimeout(r, 5000));
+				msg.delete().catch(err => logger.debug("issue while deleting reply message " + err.toString()));
+				message.delete().catch((err) => logger.error("issue while deleting above-submission message ", err.toString()));
+			}).catch(err => logger.debug("issue while replying " + err.toString()));
+			return;
 		}
-		let targetMessage = message.channel.messages.cache.last(target)[target-1];
 		//logger.debug("tm1  ", targetMessage);
-		message.delete().catch((err) => logger.error("issue while deleting message ", err.toString()));
+		message.delete().catch((err) => logger.error("issue while deleting above-submission message ", err.toString()));
 		if (bug) handleSubmission(targetMessage, "bug");
 		if (submission) handleSubmission(targetMessage, "suggestion");
 		return;
@@ -109,7 +129,7 @@ async function validateSubmission(message: Message | PartialMessage) {
 	if (submission) await confirmSuggestion(message);
 }
 
-async function confirmSuggestion(msg: Message | PartialMessage): Promise<void> {
+async function confirmSuggestion(msg: Message): Promise<void> {
 
 	if (!isFirstSuggestion(msg.author)) {
 		handleSubmission(msg, "suggestion");
@@ -161,7 +181,7 @@ function addUserToList(user: User): void {
 	});
 }
 
-function handleSubmission(msg: Message | PartialMessage, type: "suggestion" | "bug"): void {
+function handleSubmission(msg: Message, type: "suggestion" | "bug"): void {
 	logger.info("handling submission: " + msg.content + " of type " + type);
 
 	//save info to local file
@@ -172,17 +192,17 @@ function handleSubmission(msg: Message | PartialMessage, type: "suggestion" | "b
 		.then(() => msg.react("👍"))
 		.then(() => msg.react("👎"))
 		.then(() => msg.react("❌"))
-		.catch(() => logger.error("issue while adding reactions :("));
+		.catch((err) => logger.error("issue while adding reactions :( " + err.toString()));
 }
 
 function createFile(msg: Message | PartialMessage, subDirectory: "suggestion" | "bug"): void {
 	//subDirectory should be either suggestion or bug
 	const msgTitle: string = msg.id + ".json";
-	const msgLink: string = "https://discordapp.com/channels/" + msg.guild.id + "/" + msg.channel.id + "/" + msg.id;
+	const msgLink: string = "https://discordapp.com/channels/" + msg.guild?.id + "/" + msg.channel?.id + "/" + msg.id;
 	const msgJson: any = {
 		"link": msgLink,
 		"type": subDirectory,
-		"author": msg.author.tag,
+		"author": msg.author?.tag,
 		"msg": msg.content
 	};
 	fs.writeFile("./data/" + subDirectory + "s/" + msgTitle, JSON.stringify(msgJson, null, 4), function (err) {

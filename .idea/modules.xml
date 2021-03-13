@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/deployer-bot.iml" filepath="$PROJECT_DIR$/.idea/deployer-bot.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../tsCommon/.idea/tsCommon.iml" filepath="$PROJECT_DIR$/../tsCommon/.idea/tsCommon.iml" />
     </modules>
   </component>
 </project>

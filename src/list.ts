@@ -19,12 +19,20 @@ import {
 const validCommandChannels: Array<string> = config.validCommandChannels;
 
 //command for listing submissions
-client.on("message", async (message: Message | PartialMessage) => {
-	if (message.author.bot) return;
+client.on("message", async (msg: Message | PartialMessage) => {
+	let message: Message;
+
+	if (!msg.content || !msg.channel)
+		message = await msg.fetch();
+	else
+		message = msg as Message;
+
+
+	if (message.author?.bot) return;
 
 	if (!util.sentFromValidChannel(message, validCommandChannels)) return;
 
-	let type: "suggestion" | "bug";
+	let type: "suggestion" | "bug" | undefined;
 	if (message.content.startsWith("!suggestions")) type = "suggestion";
 	if (message.content.startsWith("!bugs")) type = "bug";
 	if (!type) return;
@@ -32,7 +40,7 @@ client.on("message", async (message: Message | PartialMessage) => {
 	const files: string[] = readAllFiles(type);
 	if (!files) return;
 
-	const match: RegExpMatchArray = message.content.match(/dump( \d+)?( \d+)?/);
+	const match: RegExpMatchArray | null = message.content.match(/dump( \d+)?( \d+)?/);
 
 	if (match) {
 		logger.info("matched dump request: " + match);
@@ -62,11 +70,22 @@ function waitForReaction(msg: Message, type: "suggestion" | "bug") {
 	};
 	msg.awaitReactions(filter, {max: 1, time: 600000, errors: ["time"]})//10 minute timeout
 		.then(async (collected: Collection<Snowflake, MessageReaction>) => {
+			/*
+			const reaction: MessageReaction | undefined = collected.first();
+			if (!reaction)
+				return;
+
+			let indexModify: number = 0;
+			const last: User | undefined = reaction.users.cache.last();
+			if (last)
+				reaction.users.remove(last.id).catch(err => logger.error("issue while removing reaction from list message" + err.toString()));
+			*/
+
 			const reaction = collected.first();
 			let indexModify: number = 0;
-			reaction.users.remove(reaction.users.cache.last().id).catch(err => logger.error("issue while removing reaction from list message" + err.toString()));
-			if (reaction.emoji.name === "⏪") indexModify -= 1;
-			if (reaction.emoji.name === "⏩") indexModify += 1;
+			reaction?.users.remove(reaction.users.cache.last()?.id).catch(err => logger.error("issue while removing reaction from list message" + err.toString()));
+			if (reaction?.emoji.name === "⏪") indexModify -= 1;
+			if (reaction?.emoji.name === "⏩") indexModify += 1;
 			const files: string[] = readAllFiles(type);
 			let newIndex: number = Number(msg.content) + indexModify;
 			if (newIndex < 0) newIndex = 0;
@@ -114,7 +133,7 @@ function buildEmbedWithFiles(files: string[], type: "suggestion" | "bug", page: 
 	return embed;
 }
 
-function replyDump(files: string[], msg: Message | PartialMessage, type: "suggestion" | "bug", match: RegExpMatchArray): void {
+function replyDump(files: string[], msg: Message, type: "suggestion" | "bug", match: RegExpMatchArray): void {
 	logger.debug("starting dump reply");
 	let indexStart: number = 0;
 	let indexEnd: number = files.length - 1;
