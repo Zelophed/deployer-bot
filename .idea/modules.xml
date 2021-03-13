@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectModuleManager">
-    <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/deployer-bot.iml" filepath="$PROJECT_DIR$/.idea/deployer-bot.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../tsCommon/.idea/tsCommon.iml" filepath="$PROJECT_DIR$/../tsCommon/.idea/tsCommon.iml" />
-    </modules>
-  </component>
-</project>
