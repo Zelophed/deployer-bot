@@ -137,7 +137,7 @@ client.on("message", async (msg: Message | PartialMessage) => {
 
 	statusMsg = await msg.channel.send({embed});
 
-	await new Promise((resolve) => {
+	await new Promise<void>((resolve) => {
 		serverEvents.once("infoReply", (data: CompositeServerStatus) => {
 			embed.addField("Server Info", "Status: " + data.status + " | Build: #" + data.build);
 			statusMsg.edit(embed);

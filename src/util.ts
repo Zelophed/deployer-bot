@@ -1,31 +1,44 @@
 import type {Message, PartialMessage} from "discord.js";
+import {client} from "./client";
+import {logger} from "./logger";
+import {MessageAdditions} from "discord.js";
 
 export function sentFromValidChannel(message: Message | PartialMessage, validChannels: Array<string>) {
 	return validChannels.includes(message.channel?.id ?? "nope");
 }
 
+export function messageZelo(msg: String, additional?: MessageAdditions) {
+	const zelo = client.users.cache.get("132983959272292353");
+	if (!zelo) return;
+
+	if (additional)
+		zelo.send(msg, additional).catch(err => logger.error("unable to send dm " + err));
+	else
+		zelo.send(msg).catch(err => logger.error("unable to send dm " + err));
+}
+
 export class Node {
 
 	static readonly nodes = [
-		new Node(
+		/*new Node(
 			"nodeA",
 			"1.15 Dev",
-			"A"),
+			"A"),*/
 
 		new Node(
 			"nodeB",
 			"1.16 Dev",
-			"B"),
+			"B")
 
-		new Node(
+		/*new Node(
 			"nodeC",
 			"1.16 SMP",
-			"C")
+			"C")*/
 	]
 
-	static readonly nodeA = Node.nodes[0];
-	static readonly nodeB = Node.nodes[1];
-	static readonly nodeC = Node.nodes[2];
+	//static readonly nodeA = Node.nodes[0];
+	static readonly nodeB = Node.nodes[0];
+	//static readonly nodeC = Node.nodes[2];
 
 	private constructor(
 		readonly name: string,

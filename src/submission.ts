@@ -59,12 +59,12 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 
 	if (reaction.emoji.name !== "❌") return;
 
-	//logger.debug("correct emoji");
+	logger.debug("correct emoji");
 
 	let member: GuildMember | null | undefined = reaction.message.guild?.member(user.id);
 	if (!member) return;
 
-	//logger.debug("member ", member);
+	logger.debug("member ", member);
 	if (!reaction.message.reactions.cache.some((react: MessageReaction) => react.emoji.name === "🤖")) return;
 
 	//check if member has special role;

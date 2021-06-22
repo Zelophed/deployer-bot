@@ -16,13 +16,20 @@ import "./server";
 //let people self assign roles
 import "./roles"
 
+//moderation
+import "./moderation"
+import {messageZelo} from "./util";
+
 const rolesThatCanRemoveSubmissions: Snowflake[] = config.rolesThatCanRemoveSubmissions;
 
 client.on("message", (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
 
 	if (msg.guild === null) {
-		logger.info("Got a DM: " + msg.content);
+		if (msg.author?.id === "132983959272292353") return;
+
+		logger.info("DM Msg - [" + msg.author?.tag + "]: " + msg.content);
+		messageZelo("DM from [" + msg.author?.tag + "]: " + msg.content)
 		return;
 	}
 });
