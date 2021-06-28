@@ -1,7 +1,7 @@
 import * as config from "./config.json";
 import {logger} from "./logger";
 import type {Message, PartialMessage} from "discord.js";
-import {CollectorFilter, GuildMember, MessageEmbed, Snowflake} from "discord.js";
+import {CollectorFilter, DMChannel, GuildMember, MessageEmbed, MessageReaction, User} from "discord.js";
 import {client} from "./client";
 
 //adding and removing submissions
@@ -20,7 +20,7 @@ import "./roles"
 import "./moderation"
 import {messageZelo} from "./util";
 
-const rolesThatCanRemoveSubmissions: Snowflake[] = config.rolesThatCanRemoveSubmissions;
+const rolesThatCanRemoveSubmissions = config.rolesThatCanRemoveSubmissions;
 
 client.on("message", (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
@@ -29,7 +29,7 @@ client.on("message", (msg: Message | PartialMessage) => {
 		if (msg.author?.id === "132983959272292353") return;
 
 		logger.info("DM Msg - [" + msg.author?.tag + "]: " + msg.content);
-		messageZelo("DM from [" + msg.author?.tag + "]: " + msg.content)
+		messageZelo("DM from [" + msg.author?.tag + "]: " + msg.content);
 		return;
 	}
 });
@@ -44,7 +44,9 @@ client.on("message", (msg: Message | PartialMessage) => {
 		.setDescription("If you have Optifine installed, make sure your forge version is set to either **28.2.0** or **28.1.54**, others are likely to conflict with it and will crash the game while launching. See [this issue](https://github.com/sp614x/optifine/issues/3561#issuecomment-602196539) for more info")
 		.setColor(1146986);
 
-	msg.channel?.send(embed).catch(err => logger.error("issue while sending blameoptifine response" + err.toString()));
+	msg.channel?.send({
+		embeds: [ embed ]
+	}).catch(err => logger.error("issue while sending blameoptifine response" + err.toString()));
 })
 
 
@@ -58,7 +60,9 @@ client.on("message", (msg: Message | PartialMessage) => {
 		.setDescription("Great minds think alike! Please make sure to Ctrl+F on [this spreadsheet](https://docs.google.com/spreadsheets/d/1pwX1ZlIIVeLoPXmjNl3amU4iPKpEcbl4FWkOzmYZG5w) to check whether your idea has been suggested before. Thank you!")
 		.setColor(6724095);
 
-	msg.channel?.send(embed).catch(err => logger.error("issue while sending suggested reply" + err.toString()));
+	msg.channel?.send({
+		embeds: [ embed ]
+	}).catch(err => logger.error("issue while sending suggested reply" + err.toString()));
 
 });
 
@@ -79,10 +83,10 @@ client.on("message", async (message: Message | PartialMessage) => {
 	logger.debug("delete command issued");
 
 	if (!msg.author) return;
-	let member: GuildMember | null | undefined = msg.guild?.member(msg.author.id);
+	let member: GuildMember | null | undefined = msg.guild?.members.cache.get(msg.author.id);
 	if (!member) return;
 
-	let allowed = member.roles.cache.some(role => rolesThatCanRemoveSubmissions.includes(role.id));
+	let allowed = member.roles.cache.some(role => rolesThatCanRemoveSubmissions.includes(role.id.toString()));
 	if (!allowed) return;
 
 	logger.debug("user has sufficient permission");
@@ -118,9 +122,11 @@ client.on("message", async (message: Message | PartialMessage) => {
 		.setColor(6724095)
 		.addField("YEP", "Click on the ✅ Checkmark to confirm")
 
-	let replyMsg: Message = await msg.reply(embed);
+	let replyMsg: Message = await msg.reply({
+		embeds: [ embed ]
+	});
 	replyMsg.react("✅").catch(err => logger.error("issue while adding reactions :(", err));
-	const filter: CollectorFilter = (reaction, user) => {
+	const filter: CollectorFilter<[MessageReaction, User]> = (reaction, user) => {
 		//logger.debug("filter: u.id:"+user.id + "  a.id:"+msg.author.id);
 		return reaction.emoji.name === "✅" && user.id === msg.author.id;
 	};
@@ -140,11 +146,16 @@ client.on("message", async (message: Message | PartialMessage) => {
 });
 
 function deleteMessages(amount: number, msg: Message): void {
+	if (msg.channel instanceof DMChannel)
+		return;
+
 	logger.info("user + " + msg.author.tag + " issued message deletion!");
 	msg.channel.bulkDelete(amount, true).then(async collection => {
 		let embed: MessageEmbed = new MessageEmbed()
 			.setDescription("🧹 Swept " + collection.size + " messages under the rug for you 🧹");
-		let replyMsg = await msg.channel.send(embed);
+		let replyMsg = await msg.channel.send({
+			embeds: [ embed ]
+		});
 
 		setTimeout(() => replyMsg.delete(), 5000);
 	}).catch(err => {

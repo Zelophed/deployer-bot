@@ -4,7 +4,7 @@ import * as config from "./config.json";
 import {
 	GuildMember,
 	MessageReaction,
-	PartialUser,
+	PartialUser, Snowflake,
 	User
 } from "discord.js";
 
@@ -22,9 +22,9 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 
 	if (user.bot) return;
 
-	logger.debug("reaction emoji: " + reaction.emoji.name.toString());
+	logger.debug("reaction emoji: " + reaction.emoji.name?.toString());
 
-	let member: GuildMember | null | undefined = reaction.message.guild?.member(user.id);
+	let member: GuildMember | null | undefined = reaction.message.guild?.members.cache.get(user.id);
 	if (!member) return;
 	logger.debug("reactor is a valid guild member.. iterating configured messages")
 
@@ -37,7 +37,7 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 			if (pair.emoji !== reaction.emoji.name) return;
 
 			logger.debug("match found! " + pair.emoji + "..  " + pair.roleID);
-			const role = reaction.message.guild?.roles.cache.get(pair.roleID);
+			const role = reaction.message.guild?.roles.cache.get(<Snowflake>pair.roleID);
 			if (role) {
 				member?.roles.add(role);
 				logger.info("added role " + role.name + " to user " + member?.user.tag);

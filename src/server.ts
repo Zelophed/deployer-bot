@@ -3,7 +3,7 @@ import ipc = require("node-ipc");
 //import request = require("request");
 import events = require("events");
 import {client} from "./client";
-import type {ColorResolvable, Message, MessageEmbed, PartialMessage, TextChannel} from "discord.js";
+import type {ColorResolvable, Message, MessageEmbed, PartialMessage, Snowflake, TextChannel} from "discord.js";
 import * as Discord from "discord.js";
 
 import * as util from "./util";
@@ -54,7 +54,9 @@ function updateStatusMessage(data: CompositeServerStatus, node: Node) {
 				.then((message: Message) => {
 					//logger.debug("message: " + message.content);
 					//logger.debug("embed:" + JSON.stringify(statusEmbed));
-					message.edit(statusEmbed)
+					message.edit({
+						embeds: [ statusEmbed ]
+					})
 						.then(() => logger.debug("message contents updated"))
 						.catch(err => logger.error("unable to update message;; " + err));
 				})
@@ -135,12 +137,16 @@ client.on("message", async (msg: Message | PartialMessage) => {
 		msg = await msg.fetch();
 
 
-	statusMsg = await msg.channel.send({embed});
+	statusMsg = await msg.channel.send({
+		embeds: [ embed ]
+	});
 
 	await new Promise<void>((resolve) => {
 		serverEvents.once("infoReply", (data: CompositeServerStatus) => {
 			embed.addField("Server Info", "Status: " + data.status + " | Build: #" + data.build);
-			statusMsg.edit(embed);
+			statusMsg.edit({
+				embeds: [ embed ]
+			});
 			resolve();
 		});
 		emit(<Node>node, "getInfo");
@@ -149,7 +155,9 @@ client.on("message", async (msg: Message | PartialMessage) => {
 	let errorTimeout = setTimeout(() => {
 		serverEvents.removeAllListeners("updateInfo");
 		embed.addField("Failed", "Update took longer than 90 seconds, probably failed. sadge");
-		statusMsg.edit(embed);
+		statusMsg.edit({
+			embeds: [ embed ]
+		});
 	}, 90000)
 
 	serverEvents.removeAllListeners("updateInfo");
@@ -162,14 +170,18 @@ client.on("message", async (msg: Message | PartialMessage) => {
 			}
 
 			serverEvents.removeAllListeners("updateInfo");
-			statusMsg.edit(embed);
+			statusMsg.edit({
+				embeds: [ embed ]
+			});
 			clearTimeout(errorTimeout);
 			return;
 		}
 		if (data.status == "complete") {
 			embed.addField("Almost Done", "Waiting for Server to start ..");
 			serverEvents.removeAllListeners("updateInfo");
-			statusMsg.edit(embed);
+			statusMsg.edit({
+				embeds: [ embed ]
+			});
 			clearTimeout(errorTimeout);
 
 			let firstStop = true;
@@ -188,7 +200,9 @@ client.on("message", async (msg: Message | PartialMessage) => {
 					embed.addField("NOPE", "Server was unable to start, check the latest crash with !crash " + node?.name);
 				}
 
-				statusMsg.edit(embed);
+				statusMsg.edit({
+					embeds: [ embed ]
+				});
 
 				serverEvents.removeListener("stateChanged", stateChange);
 			};
@@ -202,7 +216,9 @@ client.on("message", async (msg: Message | PartialMessage) => {
 		//data.status == "running"
 		if (data.info == "newVersion") {
 			embed.addField("New Version", "[#" + data.version + "](" + data.url + ")");
-			statusMsg.edit(embed);
+			statusMsg.edit({
+				embeds: [ embed ]
+			});
 		}
 
 	});
@@ -288,7 +304,9 @@ client.on("message", async (msg: Message | PartialMessage) => {
 
 	serverEvents.removeAllListeners("crashReply");
 	serverEvents.once("crashReply", (data: DatedFile) => {
-		msg.channel?.send(node?.name + " | Date: " + data.mtime, {
+		let s = node?.name + " | Date: " + data.mtime;
+		msg.channel?.send({
+			content: s,
 			files: [{
 				attachment: "../../minecraft/managedServers/" + node?.name + "/crash-reports/" + data.name,
 				name: data.name
@@ -341,7 +359,7 @@ function matchNode(cmp: string): Node | undefined {
 }
 
 function sendMessageToChannel(data: MessageChannel): void {
-	const id: string = data.channelID ?? "692400012650610688"; //bot-spam
+	const id: Snowflake = <Snowflake>data.channelID ?? "692400012650610688"; //bot-spam
 	client.channels.fetch(id)
 		.then((channel: TextChannel) => channel.send(data.message))
 		.catch((err: any) => logger.error(err));

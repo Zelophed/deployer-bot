@@ -7,9 +7,7 @@ myIntents.add("GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTI
 
 export const client: Discord.Client = new Discord.Client({
 	partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
-	ws: {
-		intents: myIntents
-	}
+	intents: myIntents
 });
 client.setMaxListeners(25);
 client.once('ready', () => {

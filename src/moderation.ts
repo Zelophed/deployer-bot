@@ -89,7 +89,7 @@ function message(message: string, log: boolean = true, discord: boolean = true):
 
 	if (!discord) return;
 
-	const channel_id: string = "692400012650610688"; //#bot-spam
+	const channel_id = "692400012650610688"; //#bot-spam
 	client.channels.fetch(channel_id)
 		.then((channel: TextChannel) => channel.send(message))
 		.catch((err: any) => logger.error(err));

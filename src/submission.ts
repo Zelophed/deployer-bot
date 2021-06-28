@@ -9,10 +9,10 @@ import importFresh = require("import-fresh");
 import type {CollectorFilter, Message, PartialMessage, PartialUser, Snowflake} from "discord.js";
 import {GuildMember, MessageEmbed, MessageReaction, TextChannel, User} from "discord.js";
 
-const validSubmissionChannels: Snowflake[] = config.validSubmissionChannels;
-const rolesThatCanRemoveSubmissions: Snowflake[] = config.rolesThatCanRemoveSubmissions;
-const roleSuggestionId: Snowflake = config.roleSuggestionId;
-const roleBugId: Snowflake = config.roleBugId;
+const validSubmissionChannels: string[] = config.validSubmissionChannels;
+const rolesThatCanRemoveSubmissions: string[] = config.rolesThatCanRemoveSubmissions;
+const roleSuggestionId: string = config.roleSuggestionId;
+const roleBugId: string = config.roleBugId;
 
 //recognize submission and store to files
 client.on('message', async (message: Message | PartialMessage) => {
@@ -61,14 +61,14 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 
 	logger.debug("correct emoji");
 
-	let member: GuildMember | null | undefined = reaction.message.guild?.member(user.id);
+	let member: GuildMember | null | undefined = reaction.message.guild?.members.cache.get(user.id);
 	if (!member) return;
 
 	logger.debug("member ", member);
 	if (!reaction.message.reactions.cache.some((react: MessageReaction) => react.emoji.name === "🤖")) return;
 
 	//check if member has special role;
-	let allowedToRemove: boolean = reaction.message.author.id === user.id;
+	let allowedToRemove: boolean = reaction.message.author?.id === user.id;
 	allowedToRemove = allowedToRemove || member.roles.cache.some(role => rolesThatCanRemoveSubmissions.includes(role.id));
 	if (!allowedToRemove) return;
 
@@ -91,8 +91,8 @@ async function validateSubmission(message: Message) {
 
 	let submission: boolean = false;
 	let bug: boolean = false;
-	if (roles.get(roleSuggestionId)) submission = true;
-	if (roles.get(roleBugId)) bug = true;
+	if (roles.get(<Snowflake>roleSuggestionId)) submission = true;
+	if (roles.get(<Snowflake>roleBugId)) bug = true;
 
 	if (!(submission || bug)) return;
 
@@ -143,9 +143,11 @@ async function confirmSuggestion(msg: Message): Promise<void> {
 		.addField("Nevermind", "You have 5 minutes to confirm your submission, otherwise it will just get deleted")
 		.addField("Only once", "This message will NOT appear on your future submission. If you need to check the spreadsheet again type `!suggested`");
 
-	let replyMsg: Message = await msg.reply(embed);
+	let replyMsg: Message = await msg.reply({
+		embeds: [ embed ]
+	});
 	replyMsg.react("✅").catch(err => logger.error("issue while adding reactions :(", err));
-	const filter: CollectorFilter = (reaction, user) => {
+	const filter: CollectorFilter<[MessageReaction, User]> = (reaction, user) => {
 		//logger.debug("filter: u.id:"+user.id + "  a.id:"+msg.author.id);
 		return reaction.emoji.name === "✅" && user.id === msg.author.id;
 	};
@@ -154,7 +156,9 @@ async function confirmSuggestion(msg: Message): Promise<void> {
 			//logger.debug("collection success");
 			let embed: MessageEmbed = new MessageEmbed()
 				.setDescription("Thank you for your contribution!");
-			replyMsg.edit(embed);
+			replyMsg.edit({
+				embeds: [ embed ]
+			});
 			handleSubmission(msg, "suggestion");
 			addUserToList(msg.author);
 			setTimeout(() => replyMsg.delete(), 5000);

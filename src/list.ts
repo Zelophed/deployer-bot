@@ -13,7 +13,7 @@ import {
 	MessageEmbed,
 	MessageReaction,
 	PartialMessage,
-	Snowflake
+	Snowflake, User
 } from "discord.js";
 
 const validCommandChannels: Array<string> = config.validCommandChannels;
@@ -57,7 +57,10 @@ client.on("message", async (msg: Message | PartialMessage) => {
 		await thisMessage.edit(thisMessage.content + "\nbuilding embed, pls wait. \nif this message doesn't disappear after a few seconds, something went wrong. pls ping me");
 		const embed: MessageEmbed = buildEmbedWithFiles(files, type, 0);
 		//logger.debug(embed);
-		await thisMessage.edit("0", embed);
+		await thisMessage.edit({
+			content: "0",
+			embeds: [ embed ]
+		});
 		thisMessage.react("⏪").then(() => thisMessage.react("⏩")).catch(() => logger.error("issue while adding reactions :("));
 		waitForReaction(thisMessage, type);
 	}
@@ -65,8 +68,8 @@ client.on("message", async (msg: Message | PartialMessage) => {
 });
 
 function waitForReaction(msg: Message, type: "suggestion" | "bug") {
-	const filter: CollectorFilter = (reaction, user) => {
-		return ["⏪", "⏩"].includes(reaction.emoji.name) && !user.bot;
+	const filter: CollectorFilter<[MessageReaction, User]> = (reaction, user) => {
+		return ["⏪", "⏩"].includes(reaction.emoji.name ?? "no") && !user.bot;
 	};
 	msg.awaitReactions(filter, {max: 1, time: 600000, errors: ["time"]})//10 minute timeout
 		.then(async (collected: Collection<Snowflake, MessageReaction>) => {
@@ -90,7 +93,10 @@ function waitForReaction(msg: Message, type: "suggestion" | "bug") {
 			let newIndex: number = Number(msg.content) + indexModify;
 			if (newIndex < 0) newIndex = 0;
 			const embed: MessageEmbed = buildEmbedWithFiles(files, type, newIndex);
-			msg.edit(newIndex, embed).catch(err => logger.error("issue while editing list message" + err.toString()));
+			msg.edit({
+				content: newIndex.toString(),
+				embeds: [ embed ]
+			}).catch(err => logger.error("issue while editing list message" + err.toString()));
 			waitForReaction(msg, type);
 		})
 		.catch(async _collected => {
@@ -156,14 +162,14 @@ function replyDump(files: string[], msg: Message, type: "suggestion" | "bug", ma
 	fs.writeFileSync("./data/dump.txt", reply);
 	logger.debug("written dump data to file");
 
-	msg.channel.send("yo have fun with this :)", {
+	msg.channel.send({
+		content: "yo have fun with this :)",
 		files: [{
 			attachment: "./data/dump.txt",
 			name: "dump.txt"
 		}]
 	}).catch(err => logger.error("issue while sending reply" + err.toString()));
 	logger.info("finished dump reply");
-
 }
 
 function readAllFiles(subDirectory: "suggestion" | "bug"): string[] {

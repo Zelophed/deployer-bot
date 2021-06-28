@@ -1,20 +1,17 @@
 import type {Message, PartialMessage} from "discord.js";
 import {client} from "./client";
 import {logger} from "./logger";
-import {MessageAdditions} from "discord.js";
+import {MessageOptions} from "discord.js";
 
 export function sentFromValidChannel(message: Message | PartialMessage, validChannels: Array<string>) {
 	return validChannels.includes(message.channel?.id ?? "nope");
 }
 
-export function messageZelo(msg: String, additional?: MessageAdditions) {
+export function messageZelo(message: string | (MessageOptions & { split?: false | undefined; })) {
 	const zelo = client.users.cache.get("132983959272292353");
 	if (!zelo) return;
 
-	if (additional)
-		zelo.send(msg, additional).catch(err => logger.error("unable to send dm " + err));
-	else
-		zelo.send(msg).catch(err => logger.error("unable to send dm " + err));
+	zelo.send(message).catch(err => logger.error("unable to send dm " + err));
 }
 
 export class Node {
