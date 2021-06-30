@@ -1,7 +1,7 @@
 import * as config from "./config.json";
 import {logger} from "./logger";
 import type {Message, PartialMessage} from "discord.js";
-import {CollectorFilter, DMChannel, GuildMember, MessageEmbed, MessageReaction, User} from "discord.js";
+import {MessageEmbed} from "discord.js";
 import {client} from "./client";
 
 //adding and removing submissions
@@ -14,13 +14,16 @@ import "./list";
 import "./server";
 
 //let people self assign roles
-import "./roles"
+import "./roles";
+
+//slash commands
+import * as commands from "./commands";
 
 //moderation
 import "./moderation"
 import {messageZelo} from "./util";
 
-const rolesThatCanRemoveSubmissions = config.rolesThatCanRemoveSubmissions;
+commands.load();
 
 client.on("message", (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
@@ -33,22 +36,6 @@ client.on("message", (msg: Message | PartialMessage) => {
 		return;
 	}
 });
-
-//blameoptifine command
-client.on("message", (msg: Message | PartialMessage) => {
-	if (msg.author?.bot) return;
-
-	if (!(msg.content?.startsWith("!blameoptifine"))) return;
-
-	let embed: MessageEmbed = new MessageEmbed()
-		.setDescription("If you have Optifine installed, make sure your forge version is set to either **28.2.0** or **28.1.54**, others are likely to conflict with it and will crash the game while launching. See [this issue](https://github.com/sp614x/optifine/issues/3561#issuecomment-602196539) for more info")
-		.setColor(1146986);
-
-	msg.channel?.send({
-		embeds: [ embed ]
-	}).catch(err => logger.error("issue while sending blameoptifine response" + err.toString()));
-})
-
 
 //display link the the spreadsheet
 client.on("message", (msg: Message | PartialMessage) => {
@@ -65,104 +52,6 @@ client.on("message", (msg: Message | PartialMessage) => {
 	}).catch(err => logger.error("issue while sending suggested reply" + err.toString()));
 
 });
-
-//bulk delete command
-client.on("message", async (message: Message | PartialMessage) => {
-	if (message.author?.bot) return;
-
-	let msg: Message;
-
-	if (message.partial)
-		msg = await message.fetch();
-	else
-		msg = message as Message;
-
-	const match = msg.content?.match(/^!delete(?: (\d+))(?:( confirm)?)/i);
-	if (!match) return;
-
-	logger.debug("delete command issued");
-
-	if (!msg.author) return;
-	let member: GuildMember | null | undefined = msg.guild?.members.cache.get(msg.author.id);
-	if (!member) return;
-
-	let allowed = member.roles.cache.some(role => rolesThatCanRemoveSubmissions.includes(role.id.toString()));
-	if (!allowed) return;
-
-	logger.debug("user has sufficient permission");
-
-	let amount = parseInt(match[1]);
-	if (isNaN(amount)) {
-		await msg.reply("sorry, but your input don't look like a number to me");
-		return;
-	}
-
-	if (amount < 1) {
-		await msg.reply(" " + amount + " .. you serious?");
-		return;
-	}
-
-	if (amount > 95) {
-		await msg.reply("sorry, but that's a little too much for me (95 max)");
-		return;
-	}
-
-	let confirmed: boolean = match[2] !== undefined;
-
-	if (confirmed) {
-		deleteMessages(amount + 1, msg);
-		return;
-	}
-
-	logger.debug("deletion has to be confirmed first");
-
-	// confirm first
-	const embed: MessageEmbed = new MessageEmbed()
-		.setDescription("Sure you want to delete " + amount + " messages here?")
-		.setColor(6724095)
-		.addField("YEP", "Click on the ✅ Checkmark to confirm")
-
-	let replyMsg: Message = await msg.reply({
-		embeds: [ embed ]
-	});
-	replyMsg.react("✅").catch(err => logger.error("issue while adding reactions :(", err));
-	const filter: CollectorFilter<[MessageReaction, User]> = (reaction, user) => {
-		//logger.debug("filter: u.id:"+user.id + "  a.id:"+msg.author.id);
-		return reaction.emoji.name === "✅" && user.id === msg.author.id;
-	};
-
-	replyMsg.awaitReactions(filter, {max: 1, time: 15000, errors: ["time"]})
-		.then(_collected => {
-			//logger.debug("collection success");
-			deleteMessages(amount + 2, msg);
-
-		})
-		.catch(_collected => {
-			replyMsg.delete();
-			msg.delete();
-		});
-
-
-});
-
-function deleteMessages(amount: number, msg: Message): void {
-	if (msg.channel instanceof DMChannel)
-		return;
-
-	logger.info("user + " + msg.author.tag + " issued message deletion!");
-	msg.channel.bulkDelete(amount, true).then(async collection => {
-		let embed: MessageEmbed = new MessageEmbed()
-			.setDescription("🧹 Swept " + collection.size + " messages under the rug for you 🧹");
-		let replyMsg = await msg.channel.send({
-			embeds: [ embed ]
-		});
-
-		setTimeout(() => replyMsg.delete(), 5000);
-	}).catch(err => {
-		logger.error(err);
-		msg.channel.send("error while trying to delete messages here :(");
-	});
-}
 
 //catch unhandled promise rejections
 process.on("unhandledRejection", err => logger.error("unhandled promise rejection: " + err));

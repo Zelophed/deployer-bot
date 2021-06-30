@@ -17,14 +17,14 @@ export function messageZelo(message: string | (MessageOptions & { split?: false 
 export class Node {
 
 	static readonly nodes = [
-		/*new Node(
+		new Node(
 			"nodeA",
-			"1.15 Dev",
-			"A"),*/
+			"1.16 SMP",
+			"A"),
 
 		new Node(
 			"nodeB",
-			"1.16 Dev",
+			"1.16 DEV",
 			"B")
 
 		/*new Node(
@@ -33,8 +33,8 @@ export class Node {
 			"C")*/
 	]
 
-	//static readonly nodeA = Node.nodes[0];
-	static readonly nodeB = Node.nodes[0];
+	static readonly nodeA = Node.nodes[0];
+	static readonly nodeB = Node.nodes[1];
 	//static readonly nodeC = Node.nodes[2];
 
 	private constructor(

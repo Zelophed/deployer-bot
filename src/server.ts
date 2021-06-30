@@ -35,7 +35,9 @@ Node.nodes.forEach((node) => {
 
 let updateTimeout: NodeJS.Timeout | null;
 
-function emit(node: Node, event: string, data?: any) {
+export const serverEvents: EventEmitter = new events.EventEmitter();
+
+export function emit(node: Node, event: string, data?: any) {
 	ipc.of["manager-" + node.name].emit(event, data);
 }
 
@@ -65,8 +67,6 @@ function updateStatusMessage(data: CompositeServerStatus, node: Node) {
 		updateTimeout = null;
 	}, 500);
 }
-
-const serverEvents: EventEmitter = new events.EventEmitter();
 
 Node.nodes.forEach((node) => {
 	const name = "manager-" + node.name
@@ -104,6 +104,11 @@ Node.nodes.forEach((node) => {
 			logger.info("crashReply: " + data);
 
 			serverEvents.emit("crashReply", data);
+		});
+		ipc.of[name].on("certificateResponse", (data: any) => {
+			logger.info("certificateResponse: " + data);
+
+			serverEvents.emit("certificateResponse", data);
 		});
 	});
 });
@@ -158,7 +163,7 @@ client.on("message", async (msg: Message | PartialMessage) => {
 		statusMsg.edit({
 			embeds: [ embed ]
 		});
-	}, 90000)
+	}, 90000);
 
 	serverEvents.removeAllListeners("updateInfo");
 	serverEvents.on("updateInfo", (data: UpdateInfo) => {
@@ -255,6 +260,20 @@ client.on("message", async (msg: Message | PartialMessage) => {
 
 	if (!util.sentFromValidChannel(msg, validCommandChannels)) return;
 
+	//if (!(msg.content?.startsWith("!serverStatus"))) return;
+	const match = msg.content?.match(/^!whitelist(?: (.*))/i);
+
+	if (!match) return;
+	logger.debug(match);
+
+	ipc.of["manager-" + Node.nodeB.name].emit("whitelist", {username: match[1]});
+});
+
+client.on("message", async (msg: Message | PartialMessage) => {
+	if (msg.author?.bot) return;
+
+	if (!util.sentFromValidChannel(msg, validCommandChannels)) return;
+
 	//if (!(msg.content?.startsWith("!stopServer"))) return;
 	const match = msg.content?.match(/^!stop(?:Server)?(?: (\S+)?|$)/i);
 
@@ -315,6 +334,75 @@ client.on("message", async (msg: Message | PartialMessage) => {
 	});
 	ipc.of["manager-" + node.name].emit("getCrash");
 });
+
+client.on("message", async (message: Message | PartialMessage) => {
+	let msg: Message
+	if (message.partial)
+		msg = await message.fetch();
+	else
+		msg = message as Message;
+
+	if (msg.author?.bot) return;
+
+	if (!util.sentFromValidChannel(msg, validCommandChannels)) return;
+
+	if (!msg.attachments || msg.attachments.size < 1) return;
+
+	let file = msg.attachments.first();
+	if (!file || !file.name?.endsWith(".csr")) return;
+
+	//setup
+	let embed: MessageEmbed = new Discord.MessageEmbed()
+			.setDescription("Servermodlocator");
+
+	let errorTimeout = setTimeout(() => {
+		serverEvents.removeAllListeners("certificateResponse");
+		embed.addField("Failed", "Request took longer than 90 seconds, probably failed. sadge");
+		msg.reply({
+			embeds: [ embed ]
+		});
+	}, 90000);
+
+	serverEvents.removeAllListeners("certificateResponse");
+	serverEvents.once("certificateResponse", (data: any) => {
+		clearTimeout(errorTimeout);
+
+		if (!data.success) {
+			embed.addField("Failed", "Something went wrong while executing your request. Sorry :(");
+			msg.reply({
+				embeds: [ embed ]
+			});
+
+			return;
+		}
+
+		let certbuff = Buffer.from(data.cert.data);
+		let tomlbuff = Buffer.from(data.toml.data);
+
+		embed.addField("Success", "Thanks for submitting. Here's your very own certificate.");
+		embed.addField("Files", "Place these files in your \`instance/servermods\` folder and you're ready to Launch!");
+		msg.reply({
+			embeds: [ embed ],
+			files: [
+				{
+					attachment: certbuff,
+					name: "servercert.pem"
+				},
+				{
+					attachment: tomlbuff,
+					name: "serverpacklocator.toml"
+				}
+			]
+		});
+
+
+	});
+
+	ipc.of["manager-" + Node.nodeB.name].emit("setupCertificate", {
+		url: file.url
+	});
+});
+
 
 async function getNode(match: RegExpMatchArray, msg: Message | PartialMessage): Promise<Node | undefined> {
 	let find = matchNode(match[1]);

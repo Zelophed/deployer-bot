@@ -141,7 +141,7 @@ async function confirmSuggestion(msg: Message): Promise<void> {
 		.setColor(6724095)
 		.addField("Confirm", "Click on the ✅ Checkmark to confirm your submission")
 		.addField("Nevermind", "You have 5 minutes to confirm your submission, otherwise it will just get deleted")
-		.addField("Only once", "This message will NOT appear on your future submission. If you need to check the spreadsheet again type `!suggested`");
+		.addField("Only once", "This message will NOT appear on your future submission. If you need to check the spreadsheet again type `/suggested`");
 
 	let replyMsg: Message = await msg.reply({
 		embeds: [ embed ]
