@@ -123,9 +123,9 @@ class Server implements BaseCommand {
 				logger.debug("unknown node in server command " + nodeName);
 				return;
 			}
-		} else if (interaction.channelID === "692400012650610688") {//#bot-spam
+		} else if (interaction.channelID === Node.nodeB.channelID) {
 			node = Node.nodeB;
-		} else if (interaction.channelID === "123") {//TODO
+		} else if (interaction.channelID === Node.nodeA.channelID) {
 			node = Node.nodeA;
 		} else {
 			logger.info("server command used in unknown channel without node argument");

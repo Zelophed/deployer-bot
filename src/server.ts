@@ -1,6 +1,5 @@
 
 import ipc = require("node-ipc");
-//import request = require("request");
 import events = require("events");
 import {client} from "./client";
 import type {ColorResolvable, Message, MessageEmbed, PartialMessage, Snowflake, TextChannel} from "discord.js";
@@ -15,25 +14,10 @@ import * as config from "./config.json";
 import {DatedFile} from "../../tsCommon/src/lib";
 import {CompositeServerStatus, UpdateInfo, MessageChannel} from "../../tsCommon/src/ipcResponseTypes";
 
-//base link to ci page
-//const urlNoJob: string = "http://ci.tterrag.com/job/Create/";
-
 const validCommandChannels: Array<string> = config.validCommandChannels;
 
 ipc.config.id = "deployerBotLive";
 ipc.config.retry = 60000;
-
-//local version of the server status, gets updated every time we get an event from the manager socket
-const statusEmbed: MessageEmbed = new Discord.MessageEmbed()
-	.setTitle("Current Server Status")
-	.setFooter("Last Update")
-	.setTimestamp();
-
-Node.nodes.forEach((node) => {
-	statusEmbed.addField(node.name + "(" + node.label + ")", "?");
-})
-
-let updateTimeout: NodeJS.Timeout | null;
 
 export const serverEvents: EventEmitter = new events.EventEmitter();
 
@@ -43,29 +27,28 @@ export function emit(node: Node, event: string, data?: any) {
 
 function updateStatusMessage(data: CompositeServerStatus, node: Node) {
 	logger.debug("updating server status message");
-	let buildInfo: string = data.buildUrl ? "[#" + data.build + "](" + data.buildUrl + ")" : "#" + data.build;
 
-	statusEmbed.fields[Node.nodes.indexOf(node)].value = data.status + " | " + buildInfo;
-	statusEmbed.setTimestamp();
-	statusEmbed.setColor(getColorForStatus(data.status));
+	const embed: MessageEmbed = new Discord.MessageEmbed()
+			.setTitle("Current Server Status")
+			.setFooter("Last Update")
+			.setTimestamp()
+			.setColor(getColorForStatus(data.status));
 
-	if (updateTimeout) clearTimeout(updateTimeout);
-	updateTimeout = setTimeout(() => {
-		client.channels.fetch("692400012650610688")
-			.then((channel: TextChannel) => channel.messages.fetch("730519740463710440")
-				.then((message: Message) => {
-					//logger.debug("message: " + message.content);
-					//logger.debug("embed:" + JSON.stringify(statusEmbed));
-					message.edit({
-						embeds: [ statusEmbed ]
-					})
-						.then(() => logger.debug("message contents updated"))
-						.catch(err => logger.error("unable to update message;; " + err));
-				})
-				.catch(err => logger.error("issue while fetching message;; " + err)))
-			.catch(err => logger.error("issue while fetching channel;; " + err));
-		updateTimeout = null;
-	}, 500);
+	embed.addField("This is the channel for", node.name);
+	embed.addField("Label", node.label);
+	embed.addField("Server Status", data.status);
+
+	client.channels.fetch(node.channelID)
+			.then((channel: TextChannel) => {
+				channel.messages.fetch(node.messageID)
+						.then((msg: Message) => {
+							msg.edit({
+								content: "",
+								embeds: [ embed ]
+							}).then(() => logger.debug("Status message for " + node.name + " updated!"))
+								.catch(err => logger.error("Unable to update Status message for " + node.name, err))
+						}).catch(err => logger.error("Unable to fetch Status message for " + node.name, err));
+			}).catch(err => logger.error("Unable to fetch channel for " + node.name, err));
 }
 
 Node.nodes.forEach((node) => {
@@ -113,6 +96,7 @@ Node.nodes.forEach((node) => {
 	});
 });
 
+/*
 //update server command
 client.on("message", async (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
@@ -229,9 +213,9 @@ client.on("message", async (msg: Message | PartialMessage) => {
 	});
 
 	emit(node, "updateServer");
-});
+});*/
 
-client.on("message", async (msg: Message | PartialMessage) => {
+/*client.on("message", async (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
 
 	if (!util.sentFromValidChannel(msg, validCommandChannels)) return;
@@ -333,7 +317,7 @@ client.on("message", async (msg: Message | PartialMessage) => {
 		}).catch(err => logger.error("issue while sending reply" + err));
 	});
 	ipc.of["manager-" + node.name].emit("getCrash");
-});
+});*/
 
 client.on("message", async (message: Message | PartialMessage) => {
 	let msg: Message
@@ -402,49 +386,6 @@ client.on("message", async (message: Message | PartialMessage) => {
 		url: file.url
 	});
 });
-
-
-async function getNode(match: RegExpMatchArray, msg: Message | PartialMessage): Promise<Node | undefined> {
-	let find = matchNode(match[1]);
-
-	if (find) return find;
-
-	return await askForNode(msg);
-}
-
-function askForNode(msg: Message | PartialMessage): Promise<Node | undefined> {
-	return new Promise(((resolve, reject) => {
-		if (!msg.reply || !msg.channel) {
-			reject(undefined);
-			return;
-		}
-
-		msg.reply("What Server is that command for? [" + Node.nodes.map(node => node.name).join(", ") + "] \nJust reply with the name, no need to type the command again ;)");
-		msg.channel.awaitMessages(m => matchNode(m.content) !== undefined, { max: 1, time: 60000, errors: ["time"] })
-			.then((collected) => {
-				let node = matchNode(collected.last()?.content ?? "");
-				if (!node) reject(undefined);
-
-				resolve(node);
-
-			}).catch((err) => {
-			logger.error(err);
-			reject(err);
-		});
-	}))
-
-}
-
-function matchNode(cmp: string): Node | undefined {
-	if (!cmp) return undefined;
-	logger.debug("trying to match a node: ", cmp);
-
-	return Node.nodes.find((node, index) => {
-		if (index.toString() == cmp) return true;
-		if (node.alias.toLowerCase() == cmp.toLowerCase()) return true;
-		return node.name.toLowerCase() == cmp.toLowerCase();
-	});
-}
 
 function sendMessageToChannel(data: MessageChannel): void {
 	const id: Snowflake = <Snowflake>data.channelID ?? "692400012650610688"; //bot-spam

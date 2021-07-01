@@ -1,4 +1,4 @@
-import type {Message, PartialMessage} from "discord.js";
+import type {Message, PartialMessage, Snowflake} from "discord.js";
 import {client} from "./client";
 import {logger} from "./logger";
 import {MessageOptions} from "discord.js";
@@ -18,14 +18,16 @@ export class Node {
 
 	static readonly nodes = [
 		new Node(
-			"nodeA",
-			"1.16 SMP",
-			"A"),
+				"nodeA",
+				"1.16 SMP",
+				"692400012650610688",//#bot-spam
+				"730519740463710440"),
 
 		new Node(
-			"nodeB",
-			"1.16 DEV",
-			"B")
+				"nodeB",
+				"1.16 DEV",
+				"859946522874216468",//#smp-spam
+				"2")
 
 		/*new Node(
 			"nodeC",
@@ -40,6 +42,7 @@ export class Node {
 	private constructor(
 		readonly name: string,
 		readonly label: string,
-		readonly alias: string
+		readonly channelID: Snowflake,
+		readonly messageID: Snowflake
 	) {}
 }
