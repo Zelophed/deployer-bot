@@ -1,6 +1,6 @@
 import {logger} from "./logger";
 import {client} from "./client";
-import * as config from "./config.json";
+import {config} from "./config.js";
 import {
 	GuildMember,
 	MessageReaction,

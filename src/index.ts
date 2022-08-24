@@ -1,14 +1,19 @@
-import * as config from "./config.json";
+
+import process from "process";
+process.umask(0o002);
+
+import {config} from "./config.js";
 import {logger} from "./logger";
 import type {Message, PartialMessage} from "discord.js";
 import {MessageEmbed} from "discord.js";
 import {client} from "./client";
+import * as api from "./api";
 
 //adding and removing submissions
 import "./submission";
 
 //list all submissions
-import "./list";
+//import "./list";
 
 //server commands
 import "./server";
@@ -21,7 +26,7 @@ import * as commands from "./commands";
 
 //moderation
 import "./moderation"
-import {messageZelo} from "./util";
+import {messageZelo, sendMessageToChannel} from "./util";
 
 commands.load();
 
@@ -54,7 +59,44 @@ client.on("message", (msg: Message | PartialMessage) => {
 });
 
 //catch unhandled promise rejections
-process.on("unhandledRejection", err => logger.error("unhandled promise rejection: " + err));
+process.on("unhandledRejection", err => logger.error("unhandled promise rejection: ", err));
 
-//login to the bot
-client.login(config.token).catch(err => logger.error("issue during login" + err.toString()));
+//sending arbitrary messages
+process.stdin.on("data", async (data) => {
+	const str: string = data.toString();
+	let messageMatch = str.match(/sendMessage ([0-9]*) (.*)/);
+
+	if (messageMatch) {
+		let channel = messageMatch[1];
+		let message = messageMatch[2];
+		sendMessageToChannel({
+			channelID: channel,
+			message: message
+		});
+	}
+});
+
+function init() {
+	//login to the bot
+	client.login(config.token).catch(err => logger.error("issue during login" + err.toString()));
+	api.startHttp();
+}
+
+async function shutdown() {
+	client.destroy();
+	await api.stopHttp();
+	process.exit(0);
+}
+
+process.on("SIGINT", async () => {
+	logger.info("Received SIGINT, attempting to stop server and then process");
+	await shutdown();
+});
+
+process.on("SIGTERM", async () => {
+	logger.info("Received SIGTERM, attempting to stop server and then process");
+	await shutdown();
+});
+
+init();
+

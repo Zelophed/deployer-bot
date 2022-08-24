@@ -1,7 +1,8 @@
 import type {Message, PartialMessage, Snowflake} from "discord.js";
 import {client} from "./client";
 import {logger} from "./logger";
-import {MessageOptions} from "discord.js";
+import {MessageEmbed, MessageOptions, TextChannel} from "discord.js";
+import {MessageChannel} from "./types/ipcResponseTypes";
 
 export function sentFromValidChannel(message: Message | PartialMessage, validChannels: Array<string>) {
 	return validChannels.includes(message.channel?.id ?? "nope");
@@ -14,20 +15,42 @@ export function messageZelo(message: string | (MessageOptions & { split?: false 
 	zelo.send(message).catch(err => logger.error("unable to send dm " + err));
 }
 
+export function sendMessageToChannel(data: MessageChannel): void {
+	const id: Snowflake = <Snowflake>data.channelID ?? "692400012650610688"; //bot-spam
+	client.channels.fetch(id)
+			.then((channel: TextChannel) => {
+				if (data.embed === true)
+					return channel.send({
+						embeds: [ new MessageEmbed().setDescription(data.message) ]
+					})
+				else
+					return channel.send(data.message);
+			})
+			.catch((err: any) => logger.error(err));
+}
+
+export function capitalizeFirstLetter(str: string): string {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export class Node {
 
 	static readonly nodes = [
 		new Node(
+				"A",
 				"nodeA",
 				"1.16 SMP",
-				"692400012650610688",//#bot-spam
-				"730519740463710440"),
+				8271,
+				"859946522874216468",//#smp-spam
+				"859959843762995231"),
 
 		new Node(
+				"B",
 				"nodeB",
-				"1.16 DEV",
-				"859946522874216468",//#smp-spam
-				"2")
+				"1.18 DEV",
+				8272,
+				"692400012650610688",//#bot-spam
+				"730519740463710440")
 
 		/*new Node(
 			"nodeC",
@@ -40,9 +63,17 @@ export class Node {
 	//static readonly nodeC = Node.nodes[2];
 
 	private constructor(
-		readonly name: string,
-		readonly label: string,
-		readonly channelID: Snowflake,
-		readonly messageID: Snowflake
+			readonly id: string,
+			readonly name: string,
+			readonly label: string,
+			readonly port: number,
+			readonly channelID: Snowflake,
+			readonly messageID: Snowflake
 	) {}
+
+	static byID = (id: string) => {
+		return Node.nodes.find(value => value.id.toLowerCase() == id.toLowerCase())
+	}
+
+
 }

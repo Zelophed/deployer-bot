@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  node:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    working_dir: /home/node/app
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    environment:
+      NODE_ENV: 'production'
+    volumes:
+      - ./:/home/node/app
+    network_mode: "host"
+    restart: "unless-stopped"

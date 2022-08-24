@@ -2,13 +2,17 @@ import {logger} from "./logger";
 import {client} from "./client";
 import {GuildMember, Snowflake, TextChannel} from "discord.js";
 import * as fs from "fs";
-import importFresh = require("import-fresh");
 
 type mute = { id: Snowflake, name: String };
 type mutes = { users: mute[] };
 
 const mutedRoleId = "732990400637435915";
 const modPrefix = "[Moderation] ";
+
+const blockedNames = [
+		"suggestion",
+		"bug"
+]
 
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
 	if (oldMember.partial) oldMember = await oldMember.fetch();
@@ -23,11 +27,21 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
 		updateMuteStatus(newMember, isMuted);
 	}
 
+	let nick = newMember.nickname;
+	logger.debug("nick1: ", oldMember.nickname);
+	logger.debug("nick2: ", nick);
+
+	if (nick != null) {
+		if (blockedNames.includes(nick)) {
+			await newMember.setNickname("change your nickname pls");
+			message("Prevented User " + oldMember.toString() + " (" + newMember.user.tag + ") from changing their Nickname to " + nick);
+		}
+	}
 
 });
 
 function updateMuteStatus(member: GuildMember, isMuted: boolean) {
-	const mutes = <mutes>importFresh("./data/mutes.json");
+	const mutes = <mutes>JSON.parse(fs.readFileSync("./data/mutes.json", "utf8"));
 
 	if (isMuted) {
 		addMute(mutes, member);
@@ -52,7 +66,7 @@ client.on("guildMemberAdd", async member => {
 
 	logger.debug("member Join: " + member.toString() + " (" + member.user.tag + ")");
 
-	const mutes = <mutes>importFresh("./data/mutes.json");
+	const mutes = <mutes>JSON.parse(fs.readFileSync("./data/mutes.json", "utf8"));
 	if (mutes.users.find(mute => mute.id === member.id)) {
 		//add mute role back
 		member.roles.add(mutedRoleId).catch(err => logger.error("issue while adding mute role to joining member: " + err.toString()));
@@ -69,7 +83,7 @@ client.on("guildMemberRemove", async member => {
 	const isMuted: boolean = member.roles.cache.has(mutedRoleId);
 	if (!isMuted) return;
 
-	const mutes = <mutes>importFresh("./data/mutes.json");
+	const mutes = <mutes>JSON.parse(fs.readFileSync("./data/mutes.json", "utf8"));
 	addMute(mutes, member);
 	message("Muted User " + member.toString() + " (" + member.user.tag + ") has left the guild", true, false);
 })

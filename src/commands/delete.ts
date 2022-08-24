@@ -1,5 +1,5 @@
 import {BaseCommand} from "./_base";
-import {ApplicationCommandData, ApplicationCommandPermissionData, Client, CommandInteraction, DMChannel, MessageEmbed} from "discord.js";
+import {ApplicationCommandData, ApplicationCommandPermissionData, Client, CommandInteraction, DMChannel, MessageEmbed, NewsChannel, TextChannel} from "discord.js";
 import {logger} from "../logger";
 
 class Delete implements BaseCommand {
@@ -37,12 +37,16 @@ class Delete implements BaseCommand {
 			return;
 		}
 
+		if (!(interaction.channel instanceof TextChannel || interaction.channel instanceof NewsChannel)) {
+			return;
+		}
+
 		let value = <number>interaction.options.get("amount")?.value;
 		if (!value || value < 1 || value > 1000)
 			return;
 
 		logger.info("User " + interaction.user.tag + " issued message deletion for " + value + " messages!");
-		await interaction.defer({ ephemeral: true });
+		await interaction.deferReply({ ephemeral: true });
 
 		let deleted = 0;
 		while (value > 0) {

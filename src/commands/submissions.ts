@@ -92,16 +92,12 @@ class Submissions implements BaseCommand {
 	];
 
 	execute = async (client: Client, interaction: CommandInteraction) => {
-		let action = interaction.options.keyArray()[0];
+		let action = interaction.options.getSubcommand(true);
 
-		const options = interaction.options.get(action)?.options;
-		if (!options)
-			return;
-
-		const type = <"suggestion" | "bug">options.get("type")?.value;
+		const type = <"suggestion" | "bug">interaction.options.getString("type", true);
 
 		if (action === "count") {
-			await interaction.defer();
+			await interaction.deferReply();
 
 			const files = readAllFiles(type);
 			if (!files)
@@ -116,14 +112,14 @@ class Submissions implements BaseCommand {
 		}
 
 		if (action === "dump") {
-			await interaction.defer();
+			await interaction.deferReply();
 
 			const files = readAllFiles(type);
 			if (!files)
 				return;
 
-			let startArgument = <number | undefined>options.get("start")?.value;
-			let endArgument = <number | undefined>options.get("end")?.value;
+			let startArgument = interaction.options.getInteger("start");
+			let endArgument = interaction.options.getInteger("end");
 
 			logger.debug("starting dump reply");
 			let indexStart: number = 0;

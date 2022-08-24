@@ -1,10 +1,13 @@
-import {ApplicationCommandData, ApplicationCommandPermissionData, Client, CommandInteraction} from "discord.js";
+import {ApplicationCommandData, ApplicationCommandPermissionData, CacheType, Client, CommandInteraction, CommandInteractionOptionResolver} from "discord.js";
 
 export interface BaseCommand {
 	execute: (client: Client, interaction: CommandInteraction) => void;
 	data: ApplicationCommandData;
 	permissions?: ApplicationCommandPermissionData[];
 }
+
+export type Options = Omit<CommandInteractionOptionResolver, 'getMessage' | 'getFocused'>
+
 /*
 Common permissions:
 
@@ -25,6 +28,13 @@ Common permissions:
  allow collaborator role
 {
 	id: "701915794656854036",
+	type: "ROLE",
+	permission: true
+}
+
+ allow wizard role
+ {
+	id: "732703439007776899",
 	type: "ROLE",
 	permission: true
 }

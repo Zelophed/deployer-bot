@@ -2,15 +2,20 @@
 import {logger} from "./logger";
 import {readdirSync} from "fs";
 import {client} from "./client";
-import {_base} from "./commands/_base";
+import {BaseCommand} from "./commands/_base";
 import {ApplicationCommandData, Message, PartialMessage} from "discord.js";
 
-export const commandMap = new Map<string, _base>();
+export const commandMap = new Map<string, BaseCommand>();
+
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function load() {
-	const cmdFiles = readdirSync("./commands/");
+	const cmdFiles = readdirSync(__dirname + "/commands/");
 	logger.info("loading " + cmdFiles.length + " files as commands from disk");
-	cmdFiles.forEach(file => {
+	cmdFiles.forEach(async file => {
 		if (file.startsWith("_")) {
 			logger.info("skipping underscore file");
 			return;
@@ -22,7 +27,7 @@ export function load() {
 
 		const cmdName = file.split(".")[0];
 		logger.info("loading command file for: " + cmdName);
-		const cls = (require("./commands/" + file).command)
+		const cls = ((await import(__dirname + "/commands/" + file)).command)
 		const cmd = new cls();
 		commandMap.set(cmdName, cmd);
 		logger.debug(cmd.data);
@@ -53,15 +58,18 @@ client.on("message", async (msg: Message | PartialMessage) => {
 	});
 
 	const commands = await commandManager.set(commandData);
-	logger.info("set commands", commands);
+	//logger.info("set commands", commands);
 
 	commands.forEach(cmd => {
-		//logger.debug("forEach command: ", cmd);
+		logger.debug("forEach command: ", cmd);
 		const storedCmd = commandMap.get(cmd.name);
-		if (!storedCmd || !storedCmd.permissions)
+		if (!commandManager || !storedCmd || !storedCmd.permissions)
 			return;
 
-		cmd.setPermissions(storedCmd.permissions);
+		commandManager.permissions.set({
+			command: cmd.id,
+			permissions: storedCmd.permissions
+		});
 		logger.info("set permissions for command " + cmd.name + " to ", storedCmd.permissions);
 	});
 

@@ -1,13 +1,13 @@
-import * as config from "./config.json";
+
+import {config} from "./config.js";
 
 import * as fs from "fs";
 
 import {client} from "./client.js";
 import {logger} from "./logger.js";
 import * as util from "./util.js";
-import importFresh = require("import-fresh");
-import type {CollectorFilter, Message, PartialMessage, PartialUser, Snowflake} from "discord.js";
-import {GuildMember, MessageEmbed, MessageReaction, TextChannel, User} from "discord.js";
+import type {Message, PartialMessage, PartialUser, Snowflake} from "discord.js";
+import {GuildMember, MessageReaction, TextChannel, User} from "discord.js";
 
 const validSubmissionChannels: string[] = config.validSubmissionChannels;
 const rolesThatCanRemoveSubmissions: string[] = config.rolesThatCanRemoveSubmissions;
@@ -65,6 +65,9 @@ client.on("messageReactionAdd", async (reaction: MessageReaction, user: User | P
 	if (!member) return;
 
 	logger.debug("member ", member);
+
+	reaction.message.reactions.cache.forEach(value => logger.debug(value.emoji.name));
+
 	if (!reaction.message.reactions.cache.some((react: MessageReaction) => react.emoji.name === "🤖")) return;
 
 	//check if member has special role;
@@ -89,14 +92,19 @@ async function validateSubmission(message: Message) {
 	const roles = message.mentions.roles;
 	if (!roles) return;
 
-	let submission: boolean = false;
+	let suggestion: boolean = false;
 	let bug: boolean = false;
-	if (roles.get(<Snowflake>roleSuggestionId)) submission = true;
+	if (roles.get(<Snowflake>roleSuggestionId)) suggestion = true;
 	if (roles.get(<Snowflake>roleBugId)) bug = true;
 
-	if (!(submission || bug)) return;
+	if (!(suggestion || bug)) return;
 
-	const match: RegExpMatchArray | null = message.content.match(/^<@&\d+> above (\d+)$/);
+	if (message.type === "REPLY") {
+		if (await handleReply(message, suggestion, bug).catch(err => logger.error("issue while handling reply submission", err)))
+			return;
+	}
+
+	/*const match: RegExpMatchArray | null = message.content.match(/^<@&\d+> above (\d+)$/);
 	//logger.debug("match: ", match);
 	if (match) {
 		const target: number = Number(match[1]);
@@ -123,66 +131,29 @@ async function validateSubmission(message: Message) {
 		if (bug) handleSubmission(targetMessage, "bug");
 		if (submission) handleSubmission(targetMessage, "suggestion");
 		return;
-	}
+	}*/
 
 	if (bug) handleSubmission(message, "bug");
-	if (submission) await confirmSuggestion(message);
+	if (suggestion) handleSubmission(message, "suggestion");
 }
 
-async function confirmSuggestion(msg: Message): Promise<void> {
+async function handleReply(message: Message, suggestion: boolean, bug: boolean): Promise<boolean> {
+	//special case for replying with the ping only
+	let content = message.content.replaceAll(/<@&\d+>/gi, "").trim()
+	if (content !== "")
+		return false;
 
-	if (!isFirstSuggestion(msg.author)) {
-		handleSubmission(msg, "suggestion");
-		return;
-	}
+	const targetID = message.reference?.messageId;
+	if (targetID === undefined)
+		return false;
 
-	const embed: MessageEmbed = new MessageEmbed()
-		.setDescription("You are about to submit your first suggestion. I'm sure its a great idea, but maybe you aren't the first one to have it, check [this](https://docs.google.com/spreadsheets/d/1pwX1ZlIIVeLoPXmjNl3amU4iPKpEcbl4FWkOzmYZG5w) spreadsheet to see if its already suggested.\nTry searching for keywords with ctrl + F :)")
-		.setColor(6724095)
-		.addField("Confirm", "Click on the ✅ Checkmark to confirm your submission")
-		.addField("Nevermind", "You have 5 minutes to confirm your submission, otherwise it will just get deleted")
-		.addField("Only once", "This message will NOT appear on your future submission. If you need to check the spreadsheet again type `/suggested`");
+	const targetMessage = await message.channel.messages.fetch(targetID);
+	await message.delete()
 
-	let replyMsg: Message = await msg.reply({
-		embeds: [ embed ]
-	});
-	replyMsg.react("✅").catch(err => logger.error("issue while adding reactions :(", err));
-	const filter: CollectorFilter<[MessageReaction, User]> = (reaction, user) => {
-		//logger.debug("filter: u.id:"+user.id + "  a.id:"+msg.author.id);
-		return reaction.emoji.name === "✅" && user.id === msg.author.id;
-	};
-	replyMsg.awaitReactions(filter, {max: 1, time: 300000, errors: ["time"]})
-		.then(_collected => {
-			//logger.debug("collection success");
-			let embed: MessageEmbed = new MessageEmbed()
-				.setDescription("Thank you for your contribution!");
-			replyMsg.edit({
-				embeds: [ embed ]
-			});
-			handleSubmission(msg, "suggestion");
-			addUserToList(msg.author);
-			setTimeout(() => replyMsg.delete(), 5000);
-		})
-		.catch(_collected => {
-			replyMsg.delete();
-			msg.delete();
-		});
+	if (bug) handleSubmission(targetMessage, "bug");
+	if (suggestion) handleSubmission(targetMessage, "suggestion");
 
-}
-
-function isFirstSuggestion(user: User): boolean {
-	const users: any = importFresh("./data/users.json");
-	//logger.debug("list: ",users.suggestors);
-	return !users.suggestors.includes(user.id);
-}
-
-function addUserToList(user: User): void {
-	const users: any = importFresh("./data/users.json");
-	users.suggestors.push(user.id);
-	fs.writeFile("./data/users.json", JSON.stringify(users, null, 4), function (err) {
-		if (err) throw err;
-		logger.info("added user " + user.id + " to the suggestions list");
-	});
+	return true;
 }
 
 function handleSubmission(msg: Message, type: "suggestion" | "bug"): void {
