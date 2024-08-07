@@ -60,8 +60,10 @@ client.on("messageCreate", async (msg: Message | PartialMessage) => {
 	const commands = await commandManager.set(commandData);
 	//logger.info("set commands", commands);
 
+	//bots can no longer set the permissions for commands, instead they are manages via the "Integrations" section of the server settings
+	/*
 	commands.forEach(cmd => {
-		logger.debug("forEach command: ", cmd);
+		//logger.debug("forEach command: ", cmd);
 		const storedCmd = commandMap.get(cmd.name);
 		if (!commandManager || !storedCmd || !storedCmd.permissions)
 			return;
@@ -72,6 +74,7 @@ client.on("messageCreate", async (msg: Message | PartialMessage) => {
 		});
 		logger.info("set permissions for command " + cmd.name + " to ", storedCmd.permissions);
 	});
+	*/
 
 	msg.reply({
 		content: "Deployed commands successfully. Check logs for further info."

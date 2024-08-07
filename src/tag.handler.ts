@@ -4,6 +4,7 @@ import { join } from 'path';
 
 import {type EmbedField, Message, MessageEmbed} from 'discord.js';
 import {readdirSync, readFileSync} from "fs";
+import {logger} from "./logger";
 
 interface Tag {
     name: string;
@@ -37,6 +38,12 @@ export const getTags = async (): Promise<Tag[]> => {
 };
 
 export const tagCommand = async (event: Message) => {
+    if (!event.content.includes("!!"))
+        return;
+    
+    if (event.author?.bot)
+        return;
+    
     const tagName = event.content.split('!!')[1];
 
     const tags = await getTags();
@@ -54,6 +61,8 @@ export const tagCommand = async (event: Message) => {
     if (tag.image) embed.setImage(tag.image);
     if (tag.fields) embed.setFields(tag.fields);
 
+    logger.debug("posting tag " + tag.name + " for user " + event.author?.tag);
+    
     await event.channel.send({
         embeds: [embed],
     });
