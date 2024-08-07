@@ -35,7 +35,7 @@ export function load() {
 }
 
 //update slash commands
-client.on("message", async (msg: Message | PartialMessage) => {
+client.on("messageCreate", async (msg: Message | PartialMessage) => {
 	if (!client.application?.owner) await client.application?.fetch();
 
 	if (msg.content?.toLowerCase() !== "!deployCommands".toLowerCase())

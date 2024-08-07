@@ -27,10 +27,11 @@ import * as commands from "./commands";
 //moderation
 import "./moderation"
 import {messageZelo, sendMessageToChannel} from "./util";
+import {tagCommand} from "./tag.handler";
 
 commands.load();
 
-client.on("message", (msg: Message | PartialMessage) => {
+client.on("messageCreate", (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
 
 	if (msg.guild === null) {
@@ -43,7 +44,7 @@ client.on("message", (msg: Message | PartialMessage) => {
 });
 
 //display link the the spreadsheet
-client.on("message", (msg: Message | PartialMessage) => {
+client.on("messageCreate", (msg: Message | PartialMessage) => {
 	if (msg.author?.bot) return;
 
 	if (!(msg.content?.startsWith("!suggested"))) return;
@@ -57,6 +58,10 @@ client.on("message", (msg: Message | PartialMessage) => {
 	}).catch(err => logger.error("issue while sending suggested reply" + err.toString()));
 
 });
+
+client.on("messageCreate", async (msg: Message) => {
+	await tagCommand(msg)
+})
 
 //catch unhandled promise rejections
 process.on("unhandledRejection", err => logger.error("unhandled promise rejection: ", err));
