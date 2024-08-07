@@ -3,6 +3,7 @@ import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 
 import {type EmbedField, Message, MessageEmbed} from 'discord.js';
+import {readdirSync, readFileSync} from "fs";
 
 interface Tag {
     name: string;
@@ -56,4 +57,23 @@ export const tagCommand = async (event: Message) => {
     await event.channel.send({
         embeds: [embed],
     });
+};
+
+export const getTagsSync = (): Tag[] => {
+    const filenames = readdirSync(TAG_DIR);
+    const tags: Tag[] = [];
+
+    for (const _file of filenames) {
+        const file = join(TAG_DIR, _file);
+        const { data, content } = matter(readFileSync(file));
+
+        tags.push({
+            ...data,
+            name: _file.replace('.md', ''),
+            content: content.trim(),
+            color: data.color || undefined,
+        });
+    }
+
+    return tags;
 };
