@@ -42,7 +42,7 @@ export function updateStatusMessage(status: ServerStatus, node: Node) {
 }
 
 //servermodlocator cert request
-client.on("message", async (message: Message | PartialMessage) => {
+client.on("messageCreate", async (message: Message | PartialMessage) => {
 	let msg: Message
 	if (message.partial)
 		msg = await message.fetch();

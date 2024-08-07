@@ -15,7 +15,7 @@ const roleSuggestionId: string = config.roleSuggestionId;
 const roleBugId: string = config.roleBugId;
 
 //recognize submission and store to files
-client.on('message', async (message: Message | PartialMessage) => {
+client.on("messageCreate", async (message: Message | PartialMessage) => {
 	if (message.author?.bot) return;
 
 	if (message.guild === null) return;
@@ -157,6 +157,11 @@ async function handleReply(message: Message, suggestion: boolean, bug: boolean):
 }
 
 function handleSubmission(msg: Message, type: "suggestion" | "bug"): void {
+	if (type == "bug") {
+		msg.reply("This system for reporting bugs is being phased out, please report it [here](<https://github.com/Creators-of-Create/Create/issues/new/choose>) instead!")
+		return;
+	}
+
 	logger.info("handling submission: " + msg.content + " of type " + type);
 
 	//save info to local file
